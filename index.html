@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quebra-Cabeça Online</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body onload="initProjectorMode()">
+  <h1>🧩 Quebra-Cabeça Online</h1>
+
+  <div class="controls">
+    <label for="nickname">Jogador:</label>
+    <input id="nickname" placeholder="Seu nome" />
+
+    <label for="difficulty">Dificuldade:</label>
+    <select id="difficulty" onchange="startNewGame()">
+      <option value="3">3x3</option>
+      <option value="4">4x4</option>
+      <option value="5">5x5</option>
+    </select>
+
+    <button onclick="startNewGame()">Nova Partida</button>
+    <span id="timer">⏱️ 00:00</span>
+  </div>
+
+  <div id="puzzle-container"></div>
+  <p id="message"></p>
+
+  <h2>🏆 Ranking</h2>
+  <ul id="ranking"></ul>
+
+  <script src="script.js"></script>
+</body>
+</html>
