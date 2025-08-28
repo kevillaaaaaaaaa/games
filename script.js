@@ -10,7 +10,18 @@ let interval;
 let imageUrl = "";
 let emptyPos = 0;
 
-const bgColors = ['#1E1E2F', '#2F1E1E', '#1E2F1E', '#1E2F2F', '#2F2F1E'];
+const bgColors = ['#1E1E2F', '#2F1E1E', '#1E2F1E', '#2F2F1E', '#1E2F2F'];
+
+// 🔹 função auxiliar de mensagens animadas
+function showMessage(text, persist = false) {
+  message.textContent = text;
+  message.classList.add("show");
+
+  const timeout = persist ? 4000 : 1500;
+  setTimeout(() => {
+    message.classList.remove("show");
+  }, timeout);
+}
 
 function startNewGame() {
   clearInterval(interval);
@@ -26,18 +37,27 @@ function startNewGame() {
   const randomColor = bgColors[Math.floor(Math.random() * bgColors.length)];
   document.body.style.backgroundColor = randomColor;
 
+  renderBoard();
+
+  exibirRanking(gridSize);
+  startTimer();
+
+  showMessage("🚀 Nova partida iniciada!");
+}
+
+function renderBoard() {
   container.innerHTML = '';
 
-  const boardSize = container.clientWidth; // pega tamanho dinâmico
+  const boardSize = container.offsetWidth || 600;
   container.style.position = "relative";
 
   let positions = Array.from({ length: totalPieces }, (_, i) => i);
-  shuffle(positions);
+
+  emptyPos = shuffleSolvable(positions, gridSize, 200);
+
+  positions = positions.filter(p => p !== emptyPos);
 
   const pieceSize = boardSize / gridSize;
-
-  // pega a posição que será o vazio
-  emptyPos = positions.pop();
 
   positions.forEach(pos => {
     const piece = document.createElement("div");
@@ -58,12 +78,7 @@ function startNewGame() {
     container.appendChild(piece);
   });
 
-  // desenhar o quadrado vazio
   drawEmptySquare(pieceSize);
-
-  message.textContent = '';
-  exibirRanking(gridSize);
-  startTimer();
 }
 
 function drawEmptySquare(pieceSize) {
@@ -105,12 +120,37 @@ function movePiece(piece) {
   }
 }
 
-// embaralhar
-function shuffle(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    let j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
+function shuffleSolvable(positions, gridSize, moves = 200) {
+  let emptyIndex = positions.length - 1;
+
+  const directions = [
+    { row: -1, col: 0 },
+    { row: 1, col: 0 },
+    { row: 0, col: -1 },
+    { row: 0, col: 1 }
+  ];
+
+  for (let m = 0; m < moves; m++) {
+    let emptyRow = Math.floor(emptyIndex / gridSize);
+    let emptyCol = emptyIndex % gridSize;
+
+    let validMoves = directions
+      .map(d => {
+        let newRow = emptyRow + d.row;
+        let newCol = emptyCol + d.col;
+        if (newRow >= 0 && newRow < gridSize && newCol >= 0 && newCol < gridSize) {
+          return newRow * gridSize + newCol;
+        }
+        return null;
+      })
+      .filter(v => v !== null);
+
+    let swapIndex = validMoves[Math.floor(Math.random() * validMoves.length)];
+    [positions[emptyIndex], positions[swapIndex]] = [positions[swapIndex], positions[emptyIndex]];
+    emptyIndex = swapIndex;
   }
+
+  return emptyIndex;
 }
 
 function checkWin() {
@@ -119,18 +159,18 @@ function checkWin() {
     return parseInt(piece.dataset.position) === index;
   });
 
-  if (correct && emptyPos === totalPieces - 1) {
+  if (correct) {
     clearInterval(interval);
     const tempo = formatTime(seconds);
     const player = document.getElementById("nickname").value || "Anônimo";
-    message.textContent = `🎉 ${player}, você completou em ${tempo}!`;
+
+    showMessage(`🎉 ${player}, você completou em ${tempo}!`, true);
 
     salvarRanking(player, seconds, gridSize);
     exibirRanking(gridSize);
   }
 }
 
-// ranking local
 function salvarRanking(jogador, tempo, dificuldade) {
   const key = `ranking-${dificuldade}`;
   let ranking = JSON.parse(localStorage.getItem(key)) || [];
@@ -167,10 +207,44 @@ function formatTime(sec) {
   return `${m}:${s}`;
 }
 
-// Modo projetor: tela cheia automática
 function initProjectorMode() {
   if (!document.fullscreenElement) {
     document.documentElement.requestFullscreen().catch(() => {});
   }
   startNewGame();
+}
+
+function shuffleBoard() {
+  const sound = document.getElementById("shuffleSound");
+  if (sound) sound.play();
+
+  const pieces = Array.from(container.querySelectorAll(".piece"));
+  let positions = Array.from({ length: totalPieces }, (_, i) => i);
+
+  emptyPos = shuffleSolvable(positions, gridSize, 200);
+  positions = positions.filter(p => p !== emptyPos);
+
+  const boardSize = container.clientWidth;
+  const pieceSize = boardSize / gridSize;
+
+  pieces.forEach((piece, i) => {
+    const pos = positions[i];
+    piece.dataset.position = pos;
+    piece.style.left = `${(pos % gridSize) * pieceSize}px`;
+    piece.style.top = `${Math.floor(pos / gridSize) * pieceSize}px`;
+  });
+
+  const emptySquare = container.querySelector(".empty");
+  emptySquare.style.left = `${(emptyPos % gridSize) * pieceSize}px`;
+  emptySquare.style.top = `${Math.floor(emptyPos / gridSize) * pieceSize}px`;
+
+  showMessage("🔀 Embaralhado!");
+}
+
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
 }
